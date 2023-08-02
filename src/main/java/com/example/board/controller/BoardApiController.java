@@ -1,0 +1,74 @@
+package com.example.board.controller;
+
+import com.example.board.Domain.Board;
+import com.example.board.api.WrapperClass;
+import com.example.board.dto.BoardDeleteDto;
+import com.example.board.dto.BoardDto;
+import com.example.board.service.BoardService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+@RestController
+@RequiredArgsConstructor
+public class BoardApiController {
+
+    private final BoardService boardService; // Autowired로 스프링 빈에 등록
+
+    @GetMapping("/api/board-list")
+    public WrapperClass board_list() {
+        List<Board> boardList = boardService.findBoards();
+        List<BoardDto> boardDtoList = boardList.stream().map(b -> new BoardDto(b)).collect(Collectors.toList());
+        return new WrapperClass(boardDtoList);
+    }
+
+    @GetMapping("/api/board-detail/{boardId}")
+    public WrapperClass board_detail(@PathVariable("boardId") Long boardId){
+        Board board = boardService.findOne(boardId);
+        BoardDto boardDto = new BoardDto(board);
+        return new WrapperClass(boardDto);
+    }
+
+    @PostMapping("/api/create-board")
+    public ResponseEntity create_board(@RequestBody BoardDto boardDto) {
+        System.out.println("create_board/boardDto = " + boardDto);
+        HttpHeaders headers = new HttpHeaders();
+        Map<String, String> body = new HashMap<>();
+        HttpStatus status = HttpStatus.CREATED;
+        try{
+            Board board = new Board(
+                    boardDto.getId(),
+                    boardDto.getTitle(),
+                    boardDto.getContent()
+            );
+            boardService.create(board);
+        } catch (Exception exception) {
+            status = HttpStatus.BAD_REQUEST;
+            System.out.println("create_board/exception " + exception);
+        }
+        return new ResponseEntity(body, headers, status);
+    }
+
+    @DeleteMapping("/api/delete-board")
+    public ResponseEntity delete_board(@RequestBody BoardDeleteDto boardDeleteDto){
+        System.out.println("delete_board/boardDeleteDto = " + boardDeleteDto);
+        HttpHeaders headers = new HttpHeaders();
+        Map<String, String> body = new HashMap<>();
+        HttpStatus status = HttpStatus.NO_CONTENT;
+        try{
+            Board board = boardService.findOne(boardDeleteDto.getId());
+            boardService.delete(board);
+        } catch (Exception exception){
+            status = HttpStatus.BAD_REQUEST;
+            System.out.println("delete_board/exception = " + exception);
+        }
+        return new ResponseEntity(body, headers, status);
+    }
+}
